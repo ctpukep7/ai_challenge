@@ -21,197 +21,203 @@ PAGE = """<!doctype html>
     <title>Day 02 — контроль ответа DeepSeek</title>
     <style>
       :root { color: #1d1d1f; font-family: Arial, sans-serif; }
-      body { max-width: 900px; margin: 40px auto; padding: 0 16px 48px; background: #fafafa; }
+      body { max-width: 840px; margin: 40px auto; padding: 0 16px 48px; background: #fafafa; }
       h1 { margin-bottom: 8px; }
-      textarea, input { box-sizing: border-box; width: 100%; padding: 10px; font: inherit; }
-      textarea { min-height: 130px; resize: vertical; }
-      button { margin-top: 12px; padding: 10px 16px; border: 0; border-radius: 6px; background: #1267e3; color: #fff; font: inherit; cursor: pointer; }
+      textarea, input, select { box-sizing: border-box; width: 100%; padding: 10px; font: inherit; }
+      textarea { min-height: 150px; resize: vertical; }
+      button { padding: 10px 16px; border: 0; border-radius: 7px; background: #1267e3; color: #fff; font: inherit; cursor: pointer; }
       button:disabled { cursor: not-allowed; opacity: .55; }
-      details { margin-top: 24px; padding: 14px; border: 1px solid #d6d6d6; border-radius: 8px; background: #fff; }
-      summary { cursor: pointer; font-weight: 700; }
-      label { display: block; margin-top: 16px; font-weight: 700; }
-      label span { display: block; margin-top: 4px; font-weight: 400; color: #555; font-size: .9em; }
-      .card { margin-top: 22px; padding: 16px; border: 1px solid #d6d6d6; border-radius: 8px; background: #fff; }
-      .card h2 { margin-top: 0; font-size: 1.1rem; }
-      .answer { min-height: 24px; white-space: pre-wrap; line-height: 1.5; }
-      .meta, .hint { color: #555; font-size: .9em; }
+      .actions { display: flex; align-items: center; gap: 10px; margin-top: 12px; }
+      .gear { min-width: 42px; padding: 10px; font-size: 1.15rem; }
+      .section { margin-top: 22px; padding: 16px; border: 1px solid #d6d6d6; border-radius: 8px; background: #fff; }
+      .section h2 { margin-top: 0; font-size: 1.1rem; }
+      pre { overflow-x: auto; margin: 0; padding: 12px; border-radius: 6px; background: #1f2430; color: #d7e3ff; white-space: pre-wrap; }
+      .answer { min-height: 28px; white-space: pre-wrap; line-height: 1.5; }
+      .meta { color: #555; font-size: .9em; }
       .error { color: #b00020; }
-      pre { overflow-x: auto; padding: 12px; background: #1f2430; color: #d7e3ff; border-radius: 6px; }
-      .hidden { display: none; }
-      .saved-prompt { margin: 12px 0 0; padding: 10px; background: #eef5ff; border-radius: 6px; white-space: pre-wrap; }
+      dialog { width: min(560px, calc(100vw - 32px)); padding: 0; border: 0; border-radius: 10px; box-shadow: 0 16px 40px rgba(0, 0, 0, .28); }
+      dialog::backdrop { background: rgba(0, 0, 0, .38); }
+      .modal { padding: 20px; }
+      .modal-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+      .modal-header h2 { margin: 0; }
+      .close { padding: 4px 9px; background: #e7e7e7; color: #222; font-size: 1.25rem; }
+      label { display: block; margin-top: 16px; font-weight: 700; }
+      label span { display: block; margin-top: 4px; color: #555; font-size: .9em; font-weight: 400; }
+      .modal textarea { min-height: 90px; }
+      .hint { color: #555; font-size: .9em; }
     </style>
   </head>
   <body>
     <h1>Контроль ответа DeepSeek</h1>
-    <p>Сначала получите обычный ответ, затем повторите ровно тот же промпт с настройками контроля.</p>
+    <p>Отправьте промпт без настроек или добавьте нужные ограничения через шестерёнку.</p>
 
     <label for="prompt">Ваш промпт</label>
     <textarea id="prompt" placeholder="Напишите вопрос для DeepSeek"></textarea>
-    <button id="send-standard" type="button">Отправить без ограничений</button>
+    <div class="actions">
+      <button id="send" type="button">Отправить</button>
+      <button id="settings" class="gear" type="button" aria-label="Открыть настройки" title="Настройки">⚙</button>
+    </div>
 
-    <section id="standard-card" class="card hidden">
-      <h2>Стандартный ответ</h2>
-      <div id="standard-answer" class="answer"></div>
-      <p id="standard-meta" class="meta"></p>
+    <section class="section">
+      <h2>Превью JSON-запроса</h2>
+      <pre id="preview">Введите промпт, чтобы увидеть запрос.</pre>
     </section>
 
-    <details id="controls-panel">
-      <summary>Настройки контролируемого ответа</summary>
-      <p class="hint">Они будут применены только ко второму вызову. API-ключ в браузер не передаётся.</p>
-
-      <label for="format-instruction">Формат ответа
-        <span>Текстовая инструкция для модели.</span>
-      </label>
-      <textarea id="format-instruction">Краткий заголовок и ровно 3 маркированных пункта.</textarea>
-
-      <label for="max-tokens">Длина ответа (`max_tokens`)
-        <span>Максимальное количество генерируемых токенов.</span>
-      </label>
-      <input id="max-tokens" type="number" min="1" max="10000" value="120">
-
-      <label for="stop-sequence">Условие завершения (`stop`)
-        <span>Маркер, после которого API остановит генерацию.</span>
-      </label>
-      <input id="stop-sequence" type="text" value="### END">
-
-      <h3>Что будет отправлено в API</h3>
-      <pre id="controlled-preview">Сначала отправьте обычный запрос.</pre>
-      <button id="send-controlled" type="button" disabled>Отправить тот же промпт с настройками</button>
-      <p id="saved-prompt" class="saved-prompt hidden"></p>
-    </details>
-
-    <section id="controlled-card" class="card hidden">
-      <h2>Ответ с настройками</h2>
-      <div id="controlled-answer" class="answer"></div>
-      <p id="controlled-meta" class="meta"></p>
-      <p id="controlled-config" class="meta"></p>
+    <section class="section">
+      <h2>Ответ</h2>
+      <div id="answer" class="answer">Ответ появится здесь.</div>
+      <p id="meta" class="meta"></p>
     </section>
 
-    <details>
-      <summary>Превью обычного запроса</summary>
-      <pre id="standard-preview">Введите и отправьте промпт выше.</pre>
-    </details>
+    <dialog id="settings-dialog">
+      <div class="modal">
+        <div class="modal-header">
+          <h2>Настройки ответа</h2>
+          <button id="close-settings" class="close" type="button" aria-label="Закрыть настройки">×</button>
+        </div>
+        <p class="hint">Пустые поля не добавляются в API-запрос.</p>
+
+        <label for="format-instruction">Формат ответа
+          <span>Например: «Заголовок и ровно 3 маркированных пункта».</span>
+        </label>
+        <textarea id="format-instruction" placeholder="Оставьте пустым, чтобы не задавать формат"></textarea>
+
+        <label for="max-tokens">Длина ответа (`max_tokens`)
+          <span>Максимальное количество генерируемых токенов.</span>
+        </label>
+        <input id="max-tokens" type="number" min="1" max="10000" placeholder="Например: 120">
+
+        <label for="stop-sequence">Условие завершения (`stop`)
+          <span>Используйте уникальный маркер, например `<<<END_OF_ANSWER>>>`.</span>
+        </label>
+        <input id="stop-sequence" type="text" placeholder="Оставьте пустым, чтобы не задавать stop">
+
+        <label for="thinking-mode">Thinking mode
+          <span>При «Не задавать» DeepSeek использует свой режим по умолчанию.</span>
+        </label>
+        <select id="thinking-mode">
+          <option value="">Не задавать</option>
+          <option value="enabled">Включить</option>
+          <option value="disabled">Выключить</option>
+        </select>
+      </div>
+    </dialog>
 
     <script>
       const promptInput = document.getElementById("prompt");
-      const standardButton = document.getElementById("send-standard");
-      const controlledButton = document.getElementById("send-controlled");
+      const sendButton = document.getElementById("send");
+      const settingsButton = document.getElementById("settings");
+      const settingsDialog = document.getElementById("settings-dialog");
+      const closeSettingsButton = document.getElementById("close-settings");
       const formatInput = document.getElementById("format-instruction");
       const maxTokensInput = document.getElementById("max-tokens");
       const stopInput = document.getElementById("stop-sequence");
-      let savedPrompt = null;
+      const thinkingInput = document.getElementById("thinking-mode");
+      const preview = document.getElementById("preview");
+      const answer = document.getElementById("answer");
+      const meta = document.getElementById("meta");
 
-      function controlledSystemMessage(format, stopSequence) {
-        return `Следуй инструкции формата ответа: ${format}\n\n` +
-          `После основного ответа напиши на отдельной строке точную последовательность ${stopSequence}. ` +
-          "Не добавляй текст после этой последовательности.";
-      }
-
-      function controlledPayload() {
-        const format = formatInput.value.trim();
-        const stopSequence = stopInput.value.trim();
+      function currentSettings() {
         return {
-          model: "deepseek-v4-flash",
-          messages: [
-            { role: "system", content: controlledSystemMessage(format, stopSequence) },
-            { role: "user", content: savedPrompt }
-          ],
-          max_tokens: Number(maxTokensInput.value),
-          stop: [stopSequence]
+          format_instruction: formatInput.value.trim(),
+          max_tokens: maxTokensInput.value.trim(),
+          stop_sequence: stopInput.value.trim(),
+          thinking_mode: thinkingInput.value
         };
       }
 
-      function updatePreviews() {
-        if (!savedPrompt) return;
-        document.getElementById("standard-preview").textContent = JSON.stringify({
-          model: "deepseek-v4-flash",
-          messages: [{ role: "user", content: savedPrompt }]
-        }, null, 2);
-        document.getElementById("controlled-preview").textContent = JSON.stringify(controlledPayload(), null, 2);
+      function systemMessage(settings) {
+        const instructions = [];
+        if (settings.format_instruction) {
+          instructions.push(`Следуй инструкции формата ответа: ${settings.format_instruction}`);
+        }
+        if (settings.stop_sequence) {
+          instructions.push(
+            `После основного ответа напиши на отдельной строке точную последовательность ${settings.stop_sequence}. ` +
+            "Не добавляй текст после этой последовательности."
+          );
+        }
+        return instructions.join("\\n\\n");
       }
 
-      function setResult(kind, data) {
-        const card = document.getElementById(`${kind}-card`);
-        const answer = document.getElementById(`${kind}-answer`);
-        const meta = document.getElementById(`${kind}-meta`);
-        card.classList.remove("hidden");
+      function previewPayload() {
+        const prompt = promptInput.value.trim();
+        const settings = currentSettings();
+        const messages = [{ role: "user", content: prompt }];
+        const instruction = systemMessage(settings);
+        if (instruction) messages.unshift({ role: "system", content: instruction });
 
+        const payload = { model: "deepseek-v4-flash", messages };
+        if (settings.max_tokens) payload.max_tokens = Number(settings.max_tokens);
+        if (settings.stop_sequence) payload.stop = [settings.stop_sequence];
+        if (settings.thinking_mode) payload.thinking = { type: settings.thinking_mode };
+        return payload;
+      }
+
+      function updatePreview() {
+        const prompt = promptInput.value.trim();
+        preview.textContent = prompt
+          ? JSON.stringify(previewPayload(), null, 2)
+          : "Введите промпт, чтобы увидеть запрос.";
+      }
+
+      function showResult(data) {
+        answer.classList.remove("error");
         if (data.error) {
           answer.textContent = data.error;
           answer.classList.add("error");
           meta.textContent = "";
           return;
         }
-
-        answer.classList.remove("error");
         answer.textContent = data.answer;
-        meta.textContent = `Выходные токены: ${data.completion_tokens ?? "—"}; причина завершения: ${data.finish_reason ?? "—"}`;
+        const reasoning = data.reasoning_tokens == null ? "—" : data.reasoning_tokens;
+        meta.textContent =
+          `Выходные токены: ${data.completion_tokens ?? "—"}; ` +
+          `причина завершения: ${data.finish_reason ?? "—"}; ` +
+          `thinking: ${data.thinking_mode}; ` +
+          `reasoning-токены: ${reasoning}`;
       }
 
-      async function postJson(path, body) {
-        const response = await fetch(path, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(body)
-        });
-        const data = await response.json();
-        return { ok: response.ok, data };
-      }
-
-      standardButton.addEventListener("click", async () => {
+      async function sendPrompt() {
         const prompt = promptInput.value.trim();
         if (!prompt) {
-          setResult("standard", { error: "Введите промпт." });
+          showResult({ error: "Введите промпт." });
           return;
         }
 
-        standardButton.disabled = true;
-        setResult("standard", { answer: "DeepSeek отвечает..." });
+        sendButton.disabled = true;
+        showResult({ answer: "DeepSeek отвечает...", thinking_mode: "—" });
         try {
-          const result = await postJson("/ask", { prompt });
-          setResult("standard", result.data);
-          if (result.ok) {
-            savedPrompt = prompt;
-            controlledButton.disabled = false;
-            document.getElementById("saved-prompt").textContent = `Для второго вызова сохранён промпт:\n${savedPrompt}`;
-            document.getElementById("saved-prompt").classList.remove("hidden");
-            updatePreviews();
-          }
+          const response = await fetch("/ask", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ prompt, settings: currentSettings() })
+          });
+          showResult(await response.json());
         } catch (error) {
-          setResult("standard", { error: "Не удалось связаться с сервером приложения." });
+          showResult({ error: "Не удалось связаться с сервером приложения." });
         } finally {
-          standardButton.disabled = false;
+          sendButton.disabled = false;
         }
-      });
+      }
 
-      controlledButton.addEventListener("click", async () => {
-        const controls = {
-          format_instruction: formatInput.value.trim(),
-          max_tokens: Number(maxTokensInput.value),
-          stop_sequence: stopInput.value.trim()
-        };
-        updatePreviews();
-        controlledButton.disabled = true;
-        setResult("controlled", { answer: "DeepSeek отвечает с настройками..." });
-        try {
-          const result = await postJson("/ask-controlled", { prompt: savedPrompt, controls });
-          setResult("controlled", result.data);
-          document.getElementById("controlled-config").textContent =
-            `Формат: ${controls.format_instruction}; max_tokens: ${controls.max_tokens}; stop: ${controls.stop_sequence}`;
-        } catch (error) {
-          setResult("controlled", { error: "Не удалось связаться с сервером приложения." });
-        } finally {
-          controlledButton.disabled = false;
-        }
-      });
-
-      [formatInput, maxTokensInput, stopInput].forEach((input) => {
-        input.addEventListener("input", updatePreviews);
+      settingsButton.addEventListener("click", () => settingsDialog.showModal());
+      closeSettingsButton.addEventListener("click", () => settingsDialog.close());
+      sendButton.addEventListener("click", sendPrompt);
+      [promptInput, formatInput, maxTokensInput, stopInput, thinkingInput].forEach((input) => {
+        input.addEventListener("input", updatePreview);
+        input.addEventListener("change", updatePreview);
       });
     </script>
   </body>
 </html>
 """
+
+
+def value_or_attribute(value, name):
+    if isinstance(value, dict):
+        return value.get(name)
+    return getattr(value, name, None)
 
 
 def get_client():
@@ -221,17 +227,6 @@ def get_client():
     return OpenAI(api_key=api_key, base_url=DEEPSEEK_BASE_URL)
 
 
-def completion_data(completion):
-    choice = completion.choices[0]
-    answer = choice.message.content or "Модель вернула пустой ответ."
-    usage = getattr(completion, "usage", None)
-    return {
-        "answer": answer,
-        "completion_tokens": getattr(usage, "completion_tokens", None),
-        "finish_reason": choice.finish_reason,
-    }
-
-
 def validate_prompt(payload):
     prompt = payload.get("prompt") if isinstance(payload, dict) else None
     if not isinstance(prompt, str) or not prompt.strip():
@@ -239,50 +234,110 @@ def validate_prompt(payload):
     return prompt.strip(), None
 
 
-def validate_controls(payload):
-    controls = payload.get("controls") if isinstance(payload, dict) else None
-    if not isinstance(controls, dict):
-        return None, "Передайте настройки контролируемого ответа."
+def validate_settings(payload):
+    raw_settings = payload.get("settings", {}) if isinstance(payload, dict) else {}
+    if raw_settings is None:
+        raw_settings = {}
+    if not isinstance(raw_settings, dict):
+        return None, "Настройки должны быть объектом."
 
-    format_instruction = controls.get("format_instruction")
-    stop_sequence = controls.get("stop_sequence")
-    max_tokens = controls.get("max_tokens")
-    if not isinstance(format_instruction, str) or not format_instruction.strip():
-        return None, "Заполните инструкцию формата ответа."
-    if not isinstance(stop_sequence, str) or not stop_sequence.strip():
-        return None, "Заполните stop sequence."
-    if isinstance(max_tokens, bool) or not isinstance(max_tokens, int):
+    format_instruction = raw_settings.get("format_instruction", "")
+    stop_sequence = raw_settings.get("stop_sequence", "")
+    thinking_mode = raw_settings.get("thinking_mode", "")
+    raw_max_tokens = raw_settings.get("max_tokens", "")
+
+    if not isinstance(format_instruction, str) or not isinstance(stop_sequence, str):
+        return None, "Текстовые настройки должны быть строками."
+    if thinking_mode not in ("", "enabled", "disabled"):
+        return None, "Thinking mode должен быть enabled, disabled или пустым."
+
+    if raw_max_tokens in (None, ""):
+        max_tokens = None
+    elif isinstance(raw_max_tokens, bool):
         return None, "max_tokens должен быть целым числом."
-    if not 1 <= max_tokens <= MAX_ALLOWED_TOKENS:
-        return None, f"max_tokens должен быть от 1 до {MAX_ALLOWED_TOKENS}."
+    else:
+        try:
+            max_tokens = int(raw_max_tokens)
+        except (TypeError, ValueError):
+            return None, "max_tokens должен быть целым числом."
+        if str(max_tokens) != str(raw_max_tokens).strip() and not isinstance(raw_max_tokens, int):
+            return None, "max_tokens должен быть целым числом."
+        if not 1 <= max_tokens <= MAX_ALLOWED_TOKENS:
+            return None, f"max_tokens должен быть от 1 до {MAX_ALLOWED_TOKENS}."
 
     return {
         "format_instruction": format_instruction.strip(),
         "stop_sequence": stop_sequence.strip(),
+        "thinking_mode": thinking_mode,
         "max_tokens": max_tokens,
     }, None
 
 
-def controlled_system_message(format_instruction, stop_sequence):
-    return (
-        f"Следуй инструкции формата ответа: {format_instruction}\n\n"
-        f"После основного ответа напиши на отдельной строке точную последовательность "
-        f"{stop_sequence}. Не добавляй текст после этой последовательности."
-    )
+def system_message(settings):
+    instructions = []
+    if settings["format_instruction"]:
+        instructions.append(f"Следуй инструкции формата ответа: {settings['format_instruction']}")
+    if settings["stop_sequence"]:
+        instructions.append(
+            f"После основного ответа напиши на отдельной строке точную последовательность "
+            f"{settings['stop_sequence']}. Не добавляй текст после этой последовательности."
+        )
+    return "\n\n".join(instructions)
 
 
-def request_completion(messages, **options):
+def thinking_label(thinking_mode):
+    return {
+        "enabled": "включён",
+        "disabled": "выключен",
+        "": "по умолчанию DeepSeek (включён)",
+    }[thinking_mode]
+
+
+def completion_data(completion, thinking_mode):
+    choice = completion.choices[0]
+    content = choice.message.content
+    if content:
+        answer = content
+    elif choice.finish_reason == "length":
+        answer = (
+            "Финальный текст не сформирован: лимит токенов исчерпан до ответа. "
+            "Увеличьте max_tokens или выключите thinking mode."
+        )
+    else:
+        answer = "Модель вернула пустой финальный ответ."
+
+    usage = getattr(completion, "usage", None)
+    details = value_or_attribute(usage, "completion_tokens_details")
+    return {
+        "answer": answer,
+        "completion_tokens": value_or_attribute(usage, "completion_tokens"),
+        "finish_reason": choice.finish_reason,
+        "thinking_mode": thinking_label(thinking_mode),
+        "reasoning_tokens": value_or_attribute(details, "reasoning_tokens"),
+    }
+
+
+def request_completion(prompt, settings):
     client = get_client()
     if not client:
         return None, (jsonify(error="Не задан DEEPSEEK_API_KEY. Укажите ключ и перезапустите приложение."), 503)
 
+    messages = [{"role": "user", "content": prompt}]
+    instruction = system_message(settings)
+    if instruction:
+        messages.insert(0, {"role": "system", "content": instruction})
+
+    options = {}
+    if settings["max_tokens"] is not None:
+        options["max_tokens"] = settings["max_tokens"]
+    if settings["stop_sequence"]:
+        options["stop"] = [settings["stop_sequence"]]
+    if settings["thinking_mode"]:
+        options["extra_body"] = {"thinking": {"type": settings["thinking_mode"]}}
+
     try:
-        completion = client.chat.completions.create(
-            model=MODEL,
-            messages=messages,
-            **options,
-        )
-        return completion_data(completion), None
+        completion = client.chat.completions.create(model=MODEL, messages=messages, **options)
+        return completion_data(completion, settings["thinking_mode"]), None
     except Exception:
         app.logger.exception("DeepSeek request failed")
         return None, (jsonify(error="DeepSeek временно недоступен. Попробуйте ещё раз позже."), 502)
@@ -299,37 +354,11 @@ def ask():
     prompt, error = validate_prompt(payload)
     if error:
         return jsonify(error=error), 400
-
-    data, api_error = request_completion([{"role": "user", "content": prompt}])
-    if api_error:
-        return api_error
-    return jsonify(data)
-
-
-@app.post("/ask-controlled")
-def ask_controlled():
-    payload = request.get_json(silent=True)
-    prompt, error = validate_prompt(payload)
-    if error:
-        return jsonify(error=error), 400
-    controls, error = validate_controls(payload)
+    settings, error = validate_settings(payload)
     if error:
         return jsonify(error=error), 400
 
-    messages = [
-        {
-            "role": "system",
-            "content": controlled_system_message(
-                controls["format_instruction"], controls["stop_sequence"]
-            ),
-        },
-        {"role": "user", "content": prompt},
-    ]
-    data, api_error = request_completion(
-        messages,
-        max_tokens=controls["max_tokens"],
-        stop=[controls["stop_sequence"]],
-    )
+    data, api_error = request_completion(prompt, settings)
     if api_error:
         return api_error
     return jsonify(data)
