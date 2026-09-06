@@ -1,0 +1,5 @@
+bleach
+flask
+markdown
+openai
+python-dotenv

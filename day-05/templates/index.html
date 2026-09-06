@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Day 05 — Лаборатория версий моделей</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='app.css') }}">
+  </head>
+  <body>
+    <div class="machine-layout" id="machine-layout">
+      <main class="machine-shell">
+        <header class="machine-header">
+          <div><p class="eyebrow"><span class="signal"></span>AI CHALLENGE 9 · DAY 05</p><h1>Лаборатория<br>версий моделей</h1></div>
+          <p>Один промпт проходит через слабую, среднюю и сильную модель. Общие настройки применяются ко всем трём, чтобы сравнение оставалось честным.</p>
+        </header>
+
+        <section class="input-module" aria-label="Промпт для сравнения моделей">
+          <div class="module-title"><span>01</span><label for="prompt">Одинаковый промпт</label><button class="preset-button" id="preset" type="button">Пресеты задач ↗</button></div>
+          <textarea id="prompt" placeholder="Введите задачу: один и тот же текст будет отправлен всем трём моделям"></textarea>
+          <div class="launch-row"><p id="run-summary">3 модели · 3 параллельных API-вызова</p><button class="launch" id="compare" type="button">Запустить сравнение <span>→</span></button></div>
+          <p class="page-error" id="page-error" role="alert" hidden></p>
+        </section>
+
+        <section class="results-area" id="results" aria-label="Ответы моделей"></section>
+
+        <section class="analysis-section" id="analysis" hidden aria-label="Сводная статистика">
+          <div class="analysis-heading"><div><p class="eyebrow"><span>02</span> РЕЗЮМЕ ЗАПУСКА</p><h2>Статистика сравнения</h2></div><p>Время включает сеть и инфраструктуру провайдера; цена и токены — наблюдаемая ресурсоёмкость API.</p></div>
+          <div class="summary-strip" id="summary-strip"></div>
+          <div class="analysis-table-wrap"><table><thead><tr><th>Модель</th><th>Время</th><th>Входные</th><th>Выходные</th><th>Стоимость</th><th>Завершение</th></tr></thead><tbody id="analysis-rows"></tbody></table></div>
+          <p class="analysis-note">Сверяйте ответ с эталоном выбранного пресета. Скорость и стоимость не заменяют проверку точности.</p>
+        </section>
+      </main>
+
+      <aside class="control-sidebar" id="control-sidebar" aria-label="Настройки сравнения">
+        <div class="sidebar-heading"><div class="sidebar-title"><p class="eyebrow"><span class="signal"></span>CONTROL UNIT</p><strong>Настройки<br>сравнения</strong><small>Общие для трёх моделей</small></div><button class="deck-toggle" id="sidebar-toggle" type="button" aria-expanded="true">Свернуть <span>›</span></button></div>
+        <div class="sidebar-content" id="sidebar-content">
+          <p class="sidebar-summary"><span class="ready-dot"></span>3 модели · 3 параллельных API-вызова</p>
+          <section class="control-group"><div class="group-head"><div class="group-title"><span>01</span><p class="control-label">ОБЩИЕ ПАРАМЕТРЫ</p></div><span>для всех</span></div><div class="response-fields">
+            <label><span>Temperature</span><input id="temperature" type="number" min="0" max="2" step="0.1" value="0"></label>
+            <label><span>Max tokens</span><input id="max-tokens" type="number" min="1" max="10000" placeholder="Без лимита"></label>
+          </div><p class="protocol-note">Всем моделям передаётся только текст задачи. Thinking у DeepSeek принудительно выключен, у OpenRouter не передаётся.</p></section>
+          <section class="control-group"><div class="group-head"><div class="group-title"><span>02</span><p class="control-label">МОДЕЛИ</p></div><span>фиксированы</span></div><div class="model-list">
+            <div><b class="weak">СЛАБАЯ</b><p>LFM 2.5 · 2.6B<br><small>OpenRouter · free</small></p></div>
+            <div><b class="medium">СРЕДНЯЯ</b><p>DeepSeek V4 Flash<br><small>DeepSeek · по токенам</small></p></div>
+            <div><b class="strong">СИЛЬНАЯ</b><p>DeepSeek V4 Pro<br><small>DeepSeek · по токенам</small></p></div>
+          </div></section>
+          <section class="control-group"><div class="group-head"><div class="group-title"><span>03</span><p class="control-label">ИЗМЕРЕНИЯ</p></div><span>показываем</span></div><dl class="protocol-list"><div><dt>Время</dt><dd>сеть + API</dd></div><div><dt>Токены</dt><dd>usage API</dd></div><div><dt>Стоимость</dt><dd>USD по usage</dd></div><div><dt>JSON</dt><dd>без ключа</dd></div></dl></section>
+        </div>
+      </aside>
+    </div>
+
+    <dialog id="preset-dialog" class="modal preset-modal"><div class="modal-head"><div><p class="eyebrow">ГОТОВЫЕ ЗАДАЧИ</p><h2>Выберите пресет</h2></div><button class="close" type="button" data-close-dialog aria-label="Закрыть">×</button></div><p class="modal-note">В поле будет подставлена только одна задача. Затем один и тот же текст уйдёт всем трём моделям.</p><div class="preset-list" id="preset-list"></div></dialog>
+    <dialog id="info-dialog" class="modal"><div class="modal-head"><div><p class="eyebrow">БЕЗ API-КЛЮЧА</p><h2 id="info-title">JSON-запрос</h2></div><button class="close" type="button" data-close-dialog aria-label="Закрыть">×</button></div><p class="modal-note">Фактический запрос, отправленный сервером этой модели.</p><pre id="info-json"></pre></dialog>
+    <script>window.day05 = { taskPresets: {{ task_presets|tojson }} };</script>
+    <script src="{{ url_for('static', filename='app.js') }}"></script>
+  </body>
+</html>
