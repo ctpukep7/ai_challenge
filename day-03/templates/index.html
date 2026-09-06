@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Day 03 — Лаборатория рассуждений</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='app.css') }}">
+  </head>
+  <body>
+    <div class="machine-layout" id="machine-layout">
+      <main class="machine-shell">
+        <header class="machine-header">
+          <p class="eyebrow"><span class="signal"></span> AI CHALLENGE 9 · DAY 03</p>
+          <h1>Машина<br>сравнения</h1>
+          <p>Запускайте несколько способов рассуждения на одной задаче и сверяйте ответы в реальном времени.</p>
+        </header>
+
+        <section class="input-module" aria-label="Задача для сравнения">
+          <div class="module-title"><span>01</span><label for="prompt">Задача</label><button class="preset-button" id="task-presets" type="button">Пресеты задач ↗</button></div>
+          <textarea id="prompt" placeholder="Введите свою задачу или выберите готовый пресет"></textarea>
+          <div class="launch-row">
+            <p id="run-summary">4 метода · 5 API-вызовов</p>
+            <button class="launch" id="launch" type="button">Запустить сравнение <span>→</span></button>
+          </div>
+          <p class="page-error" id="page-error" role="alert" hidden></p>
+        </section>
+
+        <section class="results-area" id="results" aria-label="Сравнение ответов">
+          <div class="empty-state" id="empty-state"><span>◌</span><p>Здесь появятся независимые модули с ответами выбранных методов.</p></div>
+        </section>
+
+        <section class="analysis-section" id="analysis" aria-label="Анализ ответов" hidden>
+          <div class="analysis-heading">
+            <div><p class="eyebrow"><span>03</span> РЕЗЮМЕ ЗАПУСКА</p><h2>Анализ ответов</h2></div>
+            <p id="analysis-status">Характеристики появятся после запуска.</p>
+          </div>
+          <div class="analysis-controls"><p>ПРИМЕНЁННЫЕ НАСТРОЙКИ</p><div id="analysis-control-chips"></div></div>
+          <div class="analysis-table-wrap">
+            <table>
+              <thead><tr><th>Метод</th><th>Статус</th><th>Правильность</th><th>Объяснение</th><th>Время</th><th>API</th><th>Токены</th><th>Завершение</th><th>Reasoning</th></tr></thead>
+              <tbody id="analysis-rows"></tbody>
+            </table>
+          </div>
+          <div class="analysis-verdict" id="analysis-verdict"></div>
+          <p class="analysis-note">Сравнивайте точность и качество обоснования в карточках выше, а здесь — параметры и измеримые характеристики запуска.</p>
+        </section>
+      </main>
+
+      <aside class="control-sidebar" id="control-sidebar" aria-label="Панель управления">
+        <div class="sidebar-heading">
+          <div class="sidebar-title"><p class="eyebrow"><span class="signal"></span> CONTROL UNIT</p><strong>Панель<br>управления</strong><small>Общие параметры для всех ответов</small></div>
+          <div class="sidebar-actions"><button class="preset-button" id="comparison-presets" type="button">Пресеты ↗</button><button class="deck-toggle" id="sidebar-toggle" type="button" aria-expanded="true">Свернуть <span>›</span></button></div>
+        </div>
+        <div class="sidebar-content" id="sidebar-content">
+          <p class="sidebar-summary"><span class="ready-dot"></span><span id="sidebar-summary">4 метода · 5 API-вызовов</span></p>
+          <section class="control-group methods-group">
+            <div class="group-head"><div class="group-title"><span>01</span><p class="control-label">СПОСОБЫ РАССУЖДЕНИЯ</p></div><span>несколько сразу</span></div>
+            <div class="method-chips" id="method-chips"></div>
+          </section>
+          <section class="control-group response-controls">
+            <div class="group-head"><div class="group-title"><span>02</span><p class="control-label">ПАРАМЕТРЫ ОТВЕТА</p></div><span>единые правила</span></div>
+            <div class="response-fields">
+              <label class="format"><span>Формат</span><input id="format-instruction" placeholder="Например: 3 коротких пункта"></label>
+              <label><span>Max tokens</span><input id="max-tokens" type="number" min="1" max="10000" placeholder="Не задан"></label>
+              <label><span>Thinking</span><select id="thinking-mode"><option value="disabled">Выключен</option><option value="enabled">Включен</option><option value="">По умолчанию</option></select></label>
+            </div>
+            <div class="stop-subsection"><div class="group-head"><p class="control-label">STOP SEQUENCES</p><button class="add-stop" id="add-stop" type="button">＋ Добавить</button></div><div class="stop-list" id="stop-list"></div></div>
+          </section>
+          <section class="control-group source-controls">
+            <div class="group-head"><div class="group-title"><span>03</span><p class="control-label">ПРОВАЙДЕР И ИНСТРУКЦИИ</p></div><span>для запуска</span></div>
+            <div class="response-fields source-fields">
+              <label><span>Провайдер</span><select id="provider"><option value="openrouter" selected>OpenRouter · Free Router</option><option value="deepseek">DeepSeek · V4 Flash</option></select></label>
+              <label><span>Модель</span><input id="model-id" value="openrouter/free" list="openrouter-model-options" maxlength="200" aria-describedby="provider-hint"></label>
+              <label class="format"><span>Инструкции методов</span><select id="instruction-mode"><option value="user">В user prompt · учебный вариант</option><option value="system" selected>В system prompt</option></select></label>
+            </div>
+            <p class="provider-hint" id="provider-hint">Free Router выбирает доступную бесплатную модель. Выберите вариант из подсказок или впишите свой slug с суффиксом :free.</p>
+          </section>
+        </div>
+      </aside>
+    </div>
+
+    <dialog id="preset-dialog" class="modal"><div class="modal-head"><div><p class="eyebrow" id="modal-eyebrow"></p><h2 id="modal-title"></h2></div><button class="close" type="button" data-close-dialog aria-label="Закрыть">×</button></div><div class="preset-list" id="preset-list"></div></dialog>
+    <dialog id="info-dialog" class="modal info-modal"><div class="modal-head"><div><p class="eyebrow">БЕЗ API-КЛЮЧА</p><h2 id="info-title">JSON-запрос</h2></div><button class="close" type="button" data-close-dialog aria-label="Закрыть">×</button></div><p class="modal-note">Фактические запросы, отправленные сервером выбранному провайдеру.</p><pre id="info-json"></pre></dialog>
+
+    <datalist id="openrouter-model-options">
+      <option value="openrouter/free">Free Router · случайная бесплатная модель</option>
+      <option value="minimax/minimax-m3:free">MiniMax M3 · бесплатная фиксированная модель</option>
+      <option value="nvidia/nemotron-3-ultra-550b-a55b:free">NVIDIA Nemotron 3 Ultra · бесплатная фиксированная модель</option>
+    </datalist>
+
+    <script src="{{ url_for('static', filename='app.js') }}"></script>
+  </body>
+</html>
