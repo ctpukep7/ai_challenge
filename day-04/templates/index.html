@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Day 04 — Машина температуры</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='app.css') }}">
+  </head>
+  <body>
+    <div class="machine-layout" id="machine-layout">
+      <main class="machine-shell">
+        <header class="machine-header">
+          <p class="eyebrow"><span class="signal"></span>AI CHALLENGE 9 · DAY 04</p>
+          <h1>Машина<br>температуры</h1>
+          <p>Один промпт проходит через шесть режимов генерации. В эксперименте меняется только температура.</p>
+        </header>
+
+        <section class="input-module" aria-label="Промпт для температурного эксперимента">
+          <div class="module-title"><span>01</span><label for="prompt">Один и тот же промпт</label><button class="preset-button" id="demo-prompt" type="button">Демо-промпт ↗</button></div>
+          <textarea id="prompt" placeholder="Введите задачу: один и тот же текст будет отправлен при шести температурах от 0 до 1.9"></textarea>
+          <div class="launch-row"><p id="run-summary">6 температур · 6 API-вызовов</p><button class="launch" id="compare" type="button">Запустить эксперимент <span>→</span></button></div>
+          <p class="page-error" id="page-error" role="alert" hidden></p>
+        </section>
+
+        <section class="results-area" id="results" aria-label="Ответы при разных температурах">
+          <div class="empty-state"><span>◌</span><p>Здесь появятся шесть ответов на один и тот же промпт.</p></div>
+        </section>
+
+        <section class="analysis-section" id="analysis" hidden aria-label="Анализ температур">
+          <div class="analysis-heading"><div><p class="eyebrow"><span>02</span> РЕЗЮМЕ ЭКСПЕРИМЕНТА</p><h2>Параметры ответов</h2></div><p>Сравните идеи в карточках, а здесь — измеримые характеристики запусков.</p></div>
+          <div class="analysis-table-wrap"><table><thead><tr><th>Температура</th><th>Время</th><th>Токены</th><th>Завершение</th></tr></thead><tbody id="analysis-rows"></tbody></table></div>
+          <div class="task-guide"><p class="guide-label">ДЛЯ КАКИХ ЗАДАЧ ПОДХОДИТ</p><div class="guide-grid">
+            <article><strong>temperature = 0</strong><p>Факты, расчёты, код, извлечение данных и повторяемые инструкции.</p></article>
+            <article><strong>temperature = 0.7</strong><p>Объяснения, аналитика, диалог и тексты, где нужен баланс ясности и вариативности.</p></article>
+            <article><strong>temperature = 1.2</strong><p>Мозговой штурм, заголовки, сюжеты, рекламные варианты и другие творческие задачи.</p></article>
+            <article><strong>temperature = 1.5</strong><p>Высокая вариативность и более смелые идеи.</p></article>
+            <article><strong>temperature = 1.7</strong><p>Очень смелые формулировки и неожиданные ходы; важное нужно проверять.</p></article>
+            <article><strong>temperature = 1.9</strong><p>Максимально свободный мозговой штурм с обязательной проверкой результата.</p></article>
+          </div></div>
+          <p class="analysis-note">Высокая температура не делает ответ автоматически неверным, но важные факты и расчёты нужно проверять при любом режиме.</p>
+        </section>
+      </main>
+
+      <aside class="control-sidebar" id="control-sidebar" aria-label="Панель настроек эксперимента">
+        <div class="sidebar-heading"><div class="sidebar-title"><p class="eyebrow"><span class="signal"></span>CONTROL UNIT</p><strong>Настройки<br>эксперимента</strong><small>Общие условия для шести ответов</small></div><button class="deck-toggle" id="sidebar-toggle" type="button" aria-expanded="true">Свернуть <span>›</span></button></div>
+        <div class="sidebar-content" id="sidebar-content">
+          <p class="sidebar-summary"><span class="ready-dot"></span>6 температур · 6 API-вызовов</p>
+          <section class="control-group"><div class="group-head"><div class="group-title"><span>01</span><p class="control-label">ТЕМПЕРАТУРЫ</p></div><span>меняется только это</span></div><div class="temperature-list"><div><b>0</b><p>Точный и предсказуемый</p></div><div><b>0.7</b><p>Сбалансированный</p></div><div><b>1.2</b><p>Творческий и вариативный</p></div><div><b>1.5</b><p>Высокая вариативность</p></div><div><b>1.7</b><p>Очень смелые идеи</p></div><div><b>1.9</b><p>Максимальный разброс</p></div></div></section>
+          <section class="control-group response-controls"><div class="group-head"><div class="group-title"><span>02</span><p class="control-label">ПАРАМЕТРЫ ОТВЕТА</p></div><span>общие</span></div><div class="response-fields">
+            <label class="format"><span>Формат</span><input id="format-instruction" placeholder="Например: кратко, 3 пункта"></label>
+            <label><span>Max tokens</span><input id="max-tokens" type="number" min="1" max="10000" placeholder="Не задан"></label>
+            <label><span>Thinking</span><select id="thinking-mode"><option value="disabled">Выключен</option><option value="enabled">Включен</option><option value="">По умолчанию</option></select></label>
+          </div><div class="stop-subsection"><div class="group-head"><p class="control-label">STOP SEQUENCES</p><button class="add-stop" id="add-stop" type="button">＋ Добавить</button></div><div class="stop-list" id="stop-list"></div></div></section>
+          <section class="control-group source-controls"><div class="group-head"><div class="group-title"><span>03</span><p class="control-label">ПРОВАЙДЕР И МОДЕЛЬ</p></div><span>общие</span></div><div class="response-fields source-fields">
+            <label><span>Провайдер</span><select id="provider"><option value="deepseek" selected>DeepSeek · V4 Flash</option><option value="openrouter">OpenRouter · Free Router</option></select></label>
+            <label><span>Модель</span><input id="model-id" value="deepseek-v4-flash" list="openrouter-model-options" maxlength="200" aria-describedby="provider-hint"></label>
+          </div><p class="provider-hint" id="provider-hint">DeepSeek V4 Flash. Thinking можно включить в параметрах ответа.</p></section>
+        </div>
+      </aside>
+    </div>
+
+    <dialog id="info-dialog" class="modal"><div class="modal-head"><div><p class="eyebrow">БЕЗ API-КЛЮЧА</p><h2 id="info-title">JSON-запрос</h2></div><button class="close" type="button" data-close-dialog aria-label="Закрыть">×</button></div><p class="modal-note">Фактический запрос, отправленный сервером выбранному провайдеру.</p><pre id="info-json"></pre></dialog>
+    <datalist id="openrouter-model-options"><option value="openrouter/free">Free Router · случайная бесплатная модель</option><option value="minimax/minimax-m3:free">MiniMax M3 · бесплатная фиксированная модель</option><option value="nvidia/nemotron-3-ultra-550b-a55b:free">NVIDIA Nemotron 3 Ultra · бесплатная фиксированная модель</option></datalist>
+    <script src="{{ url_for('static', filename='app.js') }}"></script>
+  </body>
+</html>
