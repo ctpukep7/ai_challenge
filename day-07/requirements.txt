@@ -1,0 +1,5 @@
+fastapi[standard]
+openai
+python-dotenv
+markdown
+bleach
