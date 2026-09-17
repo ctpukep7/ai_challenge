@@ -1,0 +1,16 @@
+{
+  "name": "ai-challenge-day-11",
+  "private": true,
+  "scripts": {
+    "api": ".venv/bin/python -m uvicorn backend.main:app --reload --host 127.0.0.1 --port 5010",
+    "web": "npm --prefix frontend run dev -- --host 127.0.0.1 --port 5177",
+    "kill-ports": "bash -c 'for p in 5010 5177; do lsof -ti :$p | xargs kill -9 2>/dev/null || true; done'",
+    "dev:clean": "npm run kill-ports && sleep 1 && npm run dev",
+    "dev": "concurrently --kill-others-on-fail --names api,web \"npm run api\" \"npm run web\"",
+    "test": ".venv/bin/python -m unittest -v backend.test_backend",
+    "build": "npm --prefix frontend run build"
+  },
+  "devDependencies": {
+    "concurrently": "9.1.2"
+  }
+}
