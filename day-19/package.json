@@ -1,0 +1,11 @@
+{
+  "name": "day-19-mcp-composition",
+  "private": true,
+  "scripts": {
+    "dev": "concurrently -k -n api,ui \"npm run api\" \"npm --prefix frontend run dev\"",
+    "api": ".venv/bin/python -m uvicorn backend.main:app --host 127.0.0.1 --port 5018",
+    "test": ".venv/bin/python -m pytest tests -q",
+    "build": "npm --prefix frontend run build"
+  },
+  "devDependencies": { "concurrently": "^9.1.2" }
+}
