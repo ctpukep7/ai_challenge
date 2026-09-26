@@ -1,0 +1,1 @@
+{"name":"day-20-mcp-orchestration","private":true,"scripts":{"dev":"node scripts/dev.mjs","api":".venv/bin/python -m uvicorn backend.app:app --host 127.0.0.1 --port 5019","test":".venv/bin/python -m pytest tests -q","build":"npm --prefix frontend run build"}}
