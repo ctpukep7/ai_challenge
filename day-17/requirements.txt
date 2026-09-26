@@ -1,0 +1,10 @@
+fastapi==0.115.12
+uvicorn[standard]==0.34.2
+openai==1.82.0
+python-dotenv==1.1.0
+markdown==3.8
+bleach==6.2.0
+pytest==8.3.5
+httpx==0.28.1
+mcp==1.19.0
+caldav==3.3.1
