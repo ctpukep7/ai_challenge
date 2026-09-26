@@ -1,0 +1,12 @@
+{
+  "name": "day-18-weather-collection", "private": true,
+  "scripts": {
+    "dev": "concurrently -k -n api,ui \"npm run api\" \"npm --prefix frontend run dev\"",
+    "api": ".venv/bin/python -m uvicorn backend.main:app --host 127.0.0.1 --port 5017",
+    "agent:run": ".venv/bin/python -m backend.runner --run-due",
+    "cron:show": ".venv/bin/python scripts/cron.py --show",
+    "cron:status": ".venv/bin/python scripts/cron.py --status",
+    "test": ".venv/bin/python -m pytest tests -q",
+    "build": "npm --prefix frontend run build"
+  }, "devDependencies": {"concurrently": "^9.1.2"}
+}
