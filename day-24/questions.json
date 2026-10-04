@@ -1,0 +1,285 @@
+[
+  {
+    "id": "q01",
+    "question": "Как в дне 7 сохраняется контекст диалога после перезапуска?",
+    "source": "day-07/README.md",
+    "section": "Что сохраняется",
+    "unanswerable": false,
+    "expected": [
+      {
+        "fact": "История и сессии хранятся в SQLite",
+        "aliases": [
+          "SQLite"
+        ]
+      },
+      {
+        "fact": "История загружается перед запросом",
+        "aliases": [
+          "загружает историю",
+          "историю выбранной сессии"
+        ]
+      }
+    ],
+    "label": "Сохранение диалога"
+  },
+  {
+    "id": "q02",
+    "question": "Что происходит в дне 9 при ошибке первого и последующего создания summary?",
+    "source": "day-09/README.md",
+    "section": "Как работает сжатие",
+    "unanswerable": false,
+    "expected": [
+      {
+        "fact": "Неуспешно сжимаемый фрагмент не архивируется",
+        "aliases": [
+          "новый фрагмент не архивируется",
+          "не архивируется",
+          "не архивируются"
+        ]
+      },
+      {
+        "fact": "До первого успешного summary передаётся вся история",
+        "aliases": [
+          "всю историю",
+          "вся история"
+        ]
+      },
+      {
+        "fact": "После прежних сжатий используются последний summary и неархивированный хвост",
+        "aliases": [
+          "неархивированный хвост",
+          "неархивированную историю"
+        ]
+      },
+      {
+        "fact": "Архив автоматически не возвращается в запрос",
+        "aliases": [
+          "не возвращаются",
+          "не возвращается"
+        ]
+      }
+    ],
+    "label": "Ошибка summary"
+  },
+  {
+    "id": "q03",
+    "question": "Какие три стратегии управления контекстом сравнивает день 10?",
+    "source": "day-10/README.md",
+    "section": "Day 10 — управление контекстом без summary",
+    "unanswerable": false,
+    "expected": [
+      {
+        "fact": "Sliding Window",
+        "aliases": [
+          "Sliding Window"
+        ]
+      },
+      {
+        "fact": "Sticky Facts",
+        "aliases": [
+          "Sticky Facts"
+        ]
+      },
+      {
+        "fact": "Branching",
+        "aliases": [
+          "Branching"
+        ]
+      }
+    ],
+    "label": "Контекст без summary"
+  },
+  {
+    "id": "q04",
+    "question": "Что означает pause и как работает resume в дне 13?",
+    "source": "day-13/README.md",
+    "section": "Конечный автомат",
+    "unanswerable": false,
+    "expected": [
+      {
+        "fact": "Изменения и продолжение блокируются",
+        "aliases": [
+          "блокировка",
+          "запрещает",
+          "заблокированы"
+        ]
+      },
+      {
+        "fact": "Продолжение сохраняет checkpoint",
+        "aliases": [
+          "checkpoint",
+          "контрольную точку"
+        ]
+      }
+    ],
+    "label": "Пауза задачи"
+  },
+  {
+    "id": "q05",
+    "question": "Что делает preflight в дне 14 при конфликте candidate с инвариантами?",
+    "source": "day-14/README.md",
+    "section": "Rule model и preflight",
+    "unanswerable": false,
+    "expected": [
+      {
+        "fact": "Возвращается 409 invariant_conflict",
+        "aliases": [
+          "409",
+          "invariant_conflict"
+        ]
+      },
+      {
+        "fact": "Провайдер не вызывается",
+        "aliases": [
+          "провайдер не вызывается",
+          "без вызова модели"
+        ]
+      },
+      {
+        "fact": "Сообщения не сохраняются в чат",
+        "aliases": [
+          "не сохраняются",
+          "не записываются"
+        ]
+      }
+    ],
+    "label": "Конфликт инвариантов"
+  },
+  {
+    "id": "q06",
+    "question": "Какой transport использует локальный MCP server в дне 16?",
+    "source": "day-16/README.md",
+    "section": "Локальный MCP server",
+    "unanswerable": false,
+    "expected": [
+      {
+        "fact": "Transport stdio",
+        "aliases": [
+          "stdio"
+        ]
+      },
+      {
+        "fact": "Инструменты get_weather и get_forecast",
+        "aliases": [
+          "get_weather",
+          "get_forecast"
+        ]
+      }
+    ],
+    "label": "Transport MCP"
+  },
+  {
+    "id": "q07",
+    "question": "Когда агент календаря дня 17 вызывает create_event через CalDAV?",
+    "source": "day-17/README.md",
+    "section": "Что здесь делает агент",
+    "unanswerable": false,
+    "expected": [
+      {
+        "fact": "Проверка полей и выбор календаря",
+        "aliases": [
+          "проверки полей",
+          "выбора календаря"
+        ]
+      },
+      {
+        "fact": "Явное нажатие Создать событие",
+        "aliases": [
+          "Создать событие"
+        ]
+      },
+      {
+        "fact": "Проект сам по себе не создаёт запись",
+        "aliases": [
+          "ничего не создано",
+          "без записи"
+        ]
+      }
+    ],
+    "label": "Создание события"
+  },
+  {
+    "id": "q08",
+    "question": "Как cron в дне 18 запускает периодический сбор погоды?",
+    "source": "day-18/README.md",
+    "section": "Как это устроено",
+    "unanswerable": false,
+    "expected": [
+      {
+        "fact": "Общая запись проверяет SQLite раз в минуту",
+        "aliases": [
+          "раз в минуту",
+          "минутной проверки"
+        ]
+      },
+      {
+        "fact": "Сохранённый skill и параметры задания передаются модели",
+        "aliases": [
+          "skill"
+        ]
+      },
+      {
+        "fact": "История чата не передаётся",
+        "aliases": [
+          "история чата в фоновый запуск не передаётся",
+          "история чата не передаётся",
+          "историю чата не передают",
+          "без истории чата",
+          "история чата не передается"
+        ]
+      }
+    ],
+    "label": "Cron и погода"
+  },
+  {
+    "id": "q09",
+    "question": "Как в дне 20 разделяются одинаковые имена tools разных MCP серверов?",
+    "source": "day-20/README.md",
+    "section": "Как устроена оркестрация",
+    "unanswerable": false,
+    "expected": [
+      {
+        "fact": "Реестр квалифицирует имя server_id__tool_name",
+        "aliases": [
+          "server_id__tool_name"
+        ]
+      },
+      {
+        "fact": "Сохраняются схема и MCP сессия",
+        "aliases": [
+          "JSON Schema",
+          "MCP-сессии"
+        ]
+      }
+    ],
+    "label": "Имена MCP tools"
+  },
+  {
+    "id": "q10",
+    "question": "Какие условия нужны для перехода planning в execution в дне 15?",
+    "source": "day-15/README.md",
+    "section": "Guard matrix",
+    "unanswerable": false,
+    "expected": [
+      {
+        "fact": "Непустой plan_artifact",
+        "aliases": [
+          "plan_artifact"
+        ]
+      },
+      {
+        "fact": "Готовность planning_ready=true",
+        "aliases": [
+          "planning_ready"
+        ]
+      },
+      {
+        "fact": "Человеческое plan_approved=true",
+        "aliases": [
+          "plan_approved"
+        ]
+      }
+    ],
+    "label": "Условия перехода"
+  }
+]
