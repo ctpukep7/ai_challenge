@@ -1,0 +1,10 @@
+/corpus/*.md
+/data/
+/.cache/
+/.venv/
+/frontend/node_modules/
+/frontend/dist/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+*.ses

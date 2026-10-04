@@ -1,0 +1,51 @@
+{
+  "books": {
+    "clean_code": {
+      "title": "Чистый код",
+      "minimum_pages": 163
+    },
+    "clean_architecture": {
+      "title": "Чистая архитектура",
+      "minimum_pages": 316
+    }
+  },
+  "documents": [
+    {
+      "file": "clean-code-names-functions.md",
+      "title": "Чистый код: имена и функции",
+      "book": "clean_code",
+      "chapters": [
+        {"title": "Глава 2 — Содержательные имена", "first_page": 39, "last_page": 54},
+        {"title": "Глава 3 — Функции", "first_page": 55, "last_page": 78}
+      ]
+    },
+    {
+      "file": "clean-code-errors-tests.md",
+      "title": "Чистый код: ошибки и модульные тесты",
+      "book": "clean_code",
+      "chapters": [
+        {"title": "Глава 7 — Обработка ошибок", "first_page": 131, "last_page": 141},
+        {"title": "Глава 9 — Модульные тесты", "first_page": 150, "last_page": 163}
+      ]
+    },
+    {
+      "file": "clean-architecture-principles.md",
+      "title": "Чистая архитектура: принципы SOLID",
+      "book": "clean_architecture",
+      "chapters": [
+        {"title": "Глава 7 — Принцип единственной ответственности", "first_page": 82, "last_page": 89},
+        {"title": "Глава 8 — Принцип открытости/закрытости", "first_page": 90, "last_page": 96},
+        {"title": "Глава 11 — Принцип инверсии зависимости", "first_page": 107, "last_page": 112}
+      ]
+    },
+    {
+      "file": "clean-architecture-boundaries.md",
+      "title": "Чистая архитектура: границы и детали",
+      "book": "clean_architecture",
+      "chapters": [
+        {"title": "Глава 22 — Чистая архитектура", "first_page": 231, "last_page": 240},
+        {"title": "Глава 30 — База данных — это деталь", "first_page": 309, "last_page": 316}
+      ]
+    }
+  ]
+}
