@@ -1,0 +1,12 @@
+{
+  "name": "day-27-local-chat",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node scripts/dev.mjs",
+    "serve": "node scripts/dev.mjs --production",
+    "api": ".venv/bin/python -m uvicorn backend.app:app --host 127.0.0.1 --port 5026",
+    "build": "npm --prefix frontend run build",
+    "test": ".venv/bin/python -m pytest tests -q && npm --prefix frontend test"
+  }
+}
