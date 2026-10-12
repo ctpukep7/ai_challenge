@@ -1,0 +1,14 @@
+{
+  "name": "day-28-local-rag",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node scripts/dev.mjs",
+    "serve": "node scripts/dev.mjs --production",
+    "api": "../day-21/.venv/bin/python -m uvicorn backend.app:app --host 127.0.0.1 --port 5027",
+    "build": "npm --prefix frontend run build",
+    "test": "../day-21/.venv/bin/python -m pytest tests -q && npm --prefix frontend test",
+    "benchmark": "../day-21/.venv/bin/python scripts/benchmark.py",
+    "export-baseline": "../day-21/.venv/bin/python scripts/export_baseline.py"
+  }
+}

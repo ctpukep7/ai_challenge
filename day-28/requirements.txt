@@ -1,0 +1,6 @@
+# Reuse day-21/.venv; no install is needed on the existing laptop.
+fastembed==0.8.0
+fastapi>=0.115,<1
+uvicorn>=0.30,<1
+httpx>=0.27,<1
+pytest>=8,<10
