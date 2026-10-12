@@ -3,3 +3,4 @@
 *.mov
 *.mp4
 *.webm
+.local-llm/
