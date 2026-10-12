@@ -1,0 +1,12 @@
+{
+  "name": "day-30-private-llm",
+  "private": true,
+  "scripts": {
+    "setup": "../day-21/.venv/bin/python scripts/setup.py",
+    "start": "../day-21/.venv/bin/python scripts/run.py",
+    "build": "npm --prefix frontend run build",
+    "test:backend": "../day-21/.venv/bin/python -m unittest discover -s tests -v",
+    "test:frontend": "npm --prefix frontend test",
+    "test": "npm run test:backend && npm run test:frontend"
+  }
+}
