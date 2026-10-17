@@ -48,7 +48,11 @@ async def run(args):
             print(result['status'])
         else:
             result = json.loads((work / 'report.json').read_text())
-            print(await publish(api, result))
+            if os.getenv('GITHUB_RUN_ID', '').isdigit() and os.getenv('GITHUB_REPOSITORY') == api.repo:
+                result['run_url'] = f"https://github.com/{api.repo}/actions/runs/{os.environ['GITHUB_RUN_ID']}"
+            result['publication'] = await publish(api, result)
+            save(work / 'report.json', result)
+            print(json.dumps(result['publication'], ensure_ascii=False))
     finally:
         if fixture is not None:
             save(work / 'fixture-mutations.json', api.mutations)

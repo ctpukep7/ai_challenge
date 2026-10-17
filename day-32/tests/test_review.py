@@ -34,6 +34,8 @@ class Fixture:
     def __call__(self, request):
         self.calls.append(request)
         path = request.url.path
+        if path == '/graphql':
+            return httpx.Response(200, json={'data':{'repository':{'pullRequest':{'reviewThreads':{'nodes':[], 'pageInfo':{'hasNextPage':False,'endCursor':None}}}}}})
         if request.method in ('POST', 'PATCH'):
             return httpx.Response(200, json={'id': 99})
         if path.endswith('/files'):
@@ -159,18 +161,19 @@ def test_upsert_author_validated_and_escaped():
     own = {'id': 2, 'body': MARKER, 'user': {'login': 'github-actions[bot]', 'type': 'Bot'}}
     fixture = Fixture(comments=[spoof, own])
     result = report(); result['findings'][0]['title'] = '@everyone <img> [link](https://bad.example)'
-    assert run(publish(api(fixture), result)) == 'updated'
-    mutations = [r for r in fixture.calls if r.method != 'GET']
-    assert len(mutations) == 1 and mutations[0].url.path.endswith('/comments/2')
+    assert run(publish(api(fixture), result))['status'] == 'updated'
+    mutations = [r for r in fixture.calls if r.method != 'GET' and r.url.path != '/graphql']
+    assert len(mutations) == 2 and mutations[-1].url.path.endswith('/comments/2')
     body = json.loads(mutations[0].content)['body']
     assert '@everyone' not in body and '<img>' not in body
     assert '[link](https://bad.example)' not in body
-    assert 'Потенциальные баги' in body and 'Архитектурные проблемы' in body and 'Рекомендации' in body
+    summary = json.loads(mutations[-1].content)['body']
+    assert 'Потенциальные баги' in summary and 'Архитектурные проблемы' in summary and 'Рекомендации' in summary
 
 
 def test_spoof_only_creates_bot_comment():
     fixture = Fixture(comments=[{'id': 1, 'body': MARKER, 'user': {'login': 'someone', 'type': 'User'}}])
-    assert run(publish(api(fixture), report())) == 'created'
+    assert run(publish(api(fixture), report()))['status'] == 'created'
 
 
 def test_batch_limits():
