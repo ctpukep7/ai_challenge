@@ -51,6 +51,14 @@ class GitHub:
         response.raise_for_status()
         return response.json()
 
+    async def graphql(self, query, variables):
+        response = await self.client.post('/graphql', json={'query': query, 'variables': variables})
+        response.raise_for_status()
+        result = response.json()
+        if result.get('errors') or not isinstance(result.get('data'), dict):
+            raise ValueError('Неполный ответ GraphQL GitHub')
+        return result['data']
+
     async def pages(self, path):
         result = []
         for page in range(1, 101):
@@ -344,28 +352,5 @@ def markdown(report):
 
 
 async def publish(api, report):
-    if report.get('mode') == 'fixture' and not getattr(api, 'fixture_mode', False):
-        raise ValueError('Fixture нельзя публиковать в GitHub')
-    if report['repo'] != api.repo:
-        raise ValueError('Репозиторий отчёта не совпадает')
-    if report['status'] != 'reviewed':
-        return 'skipped'
-    current = await api.request('GET', f"pulls/{report['number']}")
-    if current['head']['repo'] is None or current['head']['repo']['full_name'] != api.repo:
-        raise ValueError('Fork PR пропущен')
-    if current['head']['sha'] != report['head_sha'] or current['base']['sha'] != report['base_sha']:
-        raise ValueError('Устаревший отчёт: PR изменился')
-    comments = await api.pages(f"issues/{report['number']}/comments")
-    own = next((x for x in comments if x.get('body', '').startswith(MARKER)
-                and x.get('user', {}).get('login') == 'github-actions[bot]'
-                and x.get('user', {}).get('type') == 'Bot'), None)
-    body = markdown(report)
-    # Check again after pagination, immediately before the mutation.
-    latest = await api.request('GET', f"pulls/{report['number']}")
-    if latest['head']['sha'] != report['head_sha'] or latest['base']['sha'] != report['base_sha']:
-        raise ValueError('Устаревший отчёт: PR изменился')
-    if own:
-        await api.request('PATCH', f"issues/comments/{own['id']}", json={'body': body})
-        return 'updated'
-    await api.request('POST', f"issues/{report['number']}/comments", json={'body': body})
-    return 'created'
+    from .publisher import publish_inline
+    return await publish_inline(api, report)
