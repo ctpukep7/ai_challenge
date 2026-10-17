@@ -31,6 +31,10 @@ def allowed(path):
             and not any(x in p.name.lower() for x in ('lock', 'secret', 'credential', 'token', '.min.')))
 
 
+class GraphQLPermissionError(ValueError):
+    """GitHub integration lacks permission for this specific mutation."""
+
+
 class GitHub:
     def __init__(self, repo, token, transport=None):
         if not re.fullmatch(r'[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+', repo):
@@ -55,7 +59,12 @@ class GitHub:
         response = await self.client.post('/graphql', json={'query': query, 'variables': variables})
         response.raise_for_status()
         result = response.json()
-        if result.get('errors') or not isinstance(result.get('data'), dict):
+        errors = result.get('errors')
+        if (errors and ('resolveReviewThread' in query or 'unresolveReviewThread' in query)
+                and all(e.get('type') == 'FORBIDDEN' and e.get('message') == 'Resource not accessible by integration'
+                        for e in errors)):
+            raise GraphQLPermissionError('GitHub integration не может менять состояние review thread')
+        if errors or not isinstance(result.get('data'), dict):
             raise ValueError('Неполный ответ GraphQL GitHub')
         return result['data']
 
@@ -256,6 +265,9 @@ async def generate(snapshot, root, work, provider=None, embedder=None):
     provider = provider or DeepSeek()
     if isinstance(provider, DeepSeek) and not provider.api_key:
         raise ProviderError('Ошибка конфигурации: отсутствует DEEPSEEK_API_KEY')
+    if snapshot['total_files'] == 0 and not snapshot['files'] and not snapshot['skipped']:
+        report.update(partial=False, base_corpus={'files': 0, 'bytes': 0, 'omitted': 0})
+        return report
     if embedder is None:
         cache = Path(os.environ.get('ASSISTANT_EMBED_CACHE', root / 'day-21/.cache/fastembed'))
         embedder = FastEmbedder(cache)
