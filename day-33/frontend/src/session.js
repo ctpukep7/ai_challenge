@@ -1,0 +1,5 @@
+export function nextHistory(history,ticketId,question,answer){return [...history,{ticket_id:ticketId,role:'user',content:question},{ticket_id:ticketId,role:'assistant',content:answer}].slice(-8)}
+export function createSession(request){return {ticketId:'',question:'',messages:[],history:[],pending:false,error:'',revision:0,
+select(id){this.revision++;this.ticketId=id;this.question='';this.messages=[];this.history=[];this.error='';this.pending=false},
+async send(){if(this.pending||!this.ticketId||!this.question.trim())return;const ticket=this.ticketId,revision=this.revision,q=this.question.trim();this.pending=true;this.error='';this.question='';this.messages.push({role:'user',answer:q});try{const data=await request('/api/support/ask',{ticket_id:ticket,question:q,history:this.history});if(this.revision!==revision)return;this.messages.push({role:'assistant',...data});this.history=nextHistory(this.history,ticket,q,data.answer)}catch(e){if(this.revision!==revision)return;this.error=e.message;this.question=q}finally{if(this.revision===revision)this.pending=false}}
+}}

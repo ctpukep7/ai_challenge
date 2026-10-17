@@ -1,0 +1,1 @@
+{"name":"day33-ui","version":"1.0.0","private":true,"type":"module","scripts":{"dev":"vite --host 127.0.0.1 --port 5198 --strictPort","build":"vite build","test":"node --test src/*.test.js"},"dependencies":{"vue":"3.5.44"},"devDependencies":{"vite":"6.4.4"}}
