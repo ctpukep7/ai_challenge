@@ -1,0 +1,28 @@
+{
+  "repo": "owner/repo",
+  "pr": {
+    "base": {
+      "sha": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+    },
+    "head": {
+      "sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "repo": {
+        "full_name": "owner/repo"
+      }
+    },
+    "changed_files": 1
+  },
+  "files": [
+    {
+      "filename": "example.py",
+      "status": "modified",
+      "patch": "@@ -1 +1 @@\n-old\n+new"
+    }
+  ],
+  "contents": {
+    "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb:example.py": "old",
+    "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa:example.py": "new"
+  },
+  "comments": [],
+  "findings": []
+}
