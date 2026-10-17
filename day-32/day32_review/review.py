@@ -19,7 +19,6 @@ MAX_TEXT = 6000
 TOTAL_TEXT = 100000
 BATCH_TEXT = 20000
 MAX_BATCHES = 6
-MAX_BASE_BYTES = 1000000
 SUFFIXES = {'.py', '.js', '.ts', '.tsx', '.vue', '.md', '.json', '.yml', '.yaml', '.toml', '.sql', '.css', '.html'}
 CATEGORIES = {'bug': 'Потенциальные баги', 'architecture': 'Архитектурные проблемы', 'recommendation': 'Рекомендации'}
 
@@ -273,27 +272,7 @@ async def generate(snapshot, root, work, provider=None, embedder=None):
         embedder = FastEmbedder(cache)
     paths, excluded = base_paths(root, allow_fixture=snapshot.get('mode') == 'fixture')
     report['skipped'].extend(excluded)
-    doc_paths = set(documentation_paths(root))
-    changed = snapshot['files']
-    def priority(path):
-        if path in doc_paths:
-            return (0, path)
-        if any(path in (x['path'], x['previous_path']) for x in changed):
-            return (1, path)
-        if any(str(PurePosixPath(path).parent) == str(PurePosixPath(x['path']).parent) for x in changed):
-            return (2, path)
-        return (3, path)
-    chosen, used, omitted = [], 0, 0
-    for path in sorted(paths, key=priority):
-        size = (root / path).stat().st_size
-        if used + size > MAX_BASE_BYTES:
-            omitted += 1
-        else:
-            chosen.append(path); used += size
-    if omitted:
-        report['skipped'].append({'path': '(base RAG)', 'reason': f'Лимит корпуса 1 MB: не включено {omitted} источников; приоритет документации и изменённых модулей'})
-    report['base_corpus'] = {'files': len(chosen), 'bytes': used, 'omitted': omitted}
-    paths = chosen
+    report['base_corpus'] = {'files': len(paths), 'bytes': sum((root / path).stat().st_size for path in paths), 'omitted': 0}
     index = Index(work / 'index.sqlite', root, paths, embedder)
     index.build()
     for number, batch in enumerate(batches(snapshot['files'])):

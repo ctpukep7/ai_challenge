@@ -266,3 +266,78 @@ def test_bot_closed_no_unresolve_permission_warns_without_false_success():
     assert result['reopened']==0 and result['updated']==0
     assert result['lifecycle_skipped'][0]['reason']=='viewer cannot unresolve'
     assert api.inline[0]['body']==before and api.threads[0]['isResolved']
+
+
+def test_summary_history_new_head_preserves_old_body_and_same_head_upserts():
+    import re
+    api = state()
+    first = run(publish(api, report()))
+    original = copy.deepcopy(api.comments[0])
+    assert first['summary_id'] == original['id']
+    assert first['summary_url'] == original['html_url']
+    assert first['summary_head_sha'] == 'a' * 40
+    assert f'/commit/{"a" * 40}' in original['body']
+    assert re.search(r'Публикация \(UTC\): `\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ`', original['body'])
+    api.data['pr']['head']['sha'] = 'c' * 40
+    second = run(publish(api, report(head_sha='c' * 40)))
+    assert second['status'] == 'created' and second['summary_id'] != first['summary_id']
+    assert len(api.comments) == 2 and api.comments[0] == original
+    again = run(publish(api, report(head_sha='c' * 40)))
+    assert again['status'] == 'updated' and again['summary_id'] == second['summary_id']
+    assert len(api.comments) == 2 and api.comments[0] == original
+
+
+def legacy_summary(head):
+    from day32_review.review import MARKER
+    return f'{MARKER}\n\n# AI-ревью Day32\n\nBase: `{"b" * 40}` · Head: `{head}`\n\nOld body'
+
+
+def test_legacy_current_head_migrates_other_head_remains_unchanged():
+    api = state(comments=[
+        dict(id=1, body=legacy_summary('c' * 40), user=dict(login='github-actions[bot]', type='Bot')),
+        dict(id=2, body=legacy_summary('a' * 40), user=dict(login='github-actions[bot]', type='Bot'))])
+    original = copy.deepcopy(api.comments[0])
+    result = run(publish(api, report(findings=[])))
+    assert result['status'] == 'updated' and result['summary_id'] == 2
+    assert len(api.comments) == 2 and api.comments[0] == original
+    assert f'<!-- day32-summary-head:{"a" * 40} -->' in api.comments[1]['body']
+
+
+@pytest.mark.parametrize('kind', ['human', 'legacy_other', 'marker_only', 'marker_mismatch', 'body_mismatch',
+                                 'malformed_marker', 'duplicate_marker', 'inline_host_line', 'marker_suffix'])
+def test_summary_spoofs_and_other_heads_never_overwritten(kind):
+    from day32_review.review import MARKER
+    head = 'a' * 40
+    marker_line = f'<!-- day32-summary-head:{head} -->'
+    body = legacy_summary(head).replace(MARKER, MARKER + '\n' + marker_line, 1)
+    user = dict(login='github-actions[bot]', type='Bot')
+    if kind == 'human': user['type'] = 'User'
+    if kind == 'legacy_other': body = legacy_summary('c' * 40)
+    if kind == 'marker_only': body = MARKER
+    if kind == 'marker_mismatch': body = body.replace(marker_line, f'<!-- day32-summary-head:{"c" * 40} -->')
+    if kind == 'body_mismatch': body = body.replace(f'Head: `{head}`', f'Head: `{"c" * 40}`')
+    if kind == 'malformed_marker': body = body.replace(marker_line, '<!-- day32-summary-head:invalid -->')
+    if kind == 'duplicate_marker': body += '\n' + marker_line
+    if kind == 'inline_host_line': body = body.replace(f'Base: `{"b" * 40}`', f'Quoted Base: `{"b" * 40}`')
+    if kind == 'marker_suffix': body = body.replace(MARKER, MARKER + ' appended', 1)
+    original = dict(id=1, body=body, user=user)
+    api = state(comments=[original])
+    result = run(publish(api, report(findings=[])))
+    assert result['status'] == 'created' and len(api.comments) == 2
+    assert api.comments[0] == original
+
+
+def test_summary_guard_rechecks_sha_before_mutation():
+    api = state()
+    original = api.request
+    reads = 0
+    async def race(method, path, **kw):
+        nonlocal reads
+        if method == 'GET':
+            reads += 1
+            if reads == 3: api.data['pr']['head']['sha'] = 'c' * 40
+        return await original(method, path, **kw)
+    api.request = race
+    with pytest.raises(ValueError, match='Устаревший'):
+        run(publish(api, report(findings=[])))
+    assert not api.mutations

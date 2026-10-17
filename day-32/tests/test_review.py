@@ -158,7 +158,8 @@ def test_stale_report_does_not_mutate():
 
 def test_upsert_author_validated_and_escaped():
     spoof = {'id': 1, 'body': MARKER, 'user': {'login': 'attacker', 'type': 'User'}}
-    own = {'id': 2, 'body': MARKER, 'user': {'login': 'github-actions[bot]', 'type': 'Bot'}}
+    own = {'id': 2, 'body': MARKER + '\n\nBase: `' + 'b' * 40 + '` · Head: `' + 'a' * 40 + '`',
+           'user': {'login': 'github-actions[bot]', 'type': 'Bot'}}
     fixture = Fixture(comments=[spoof, own])
     result = report(); result['findings'][0]['title'] = '@everyone <img> [link](https://bad.example)'
     assert run(publish(api(fixture), result))['status'] == 'updated'
@@ -365,3 +366,30 @@ def test_empty_live_pr_still_checks_base_checkout(tmp_path):
     empty=snapshot();empty.update(mode='live',files=[],total_files=0)
     with pytest.raises(ValueError,match='Git checkout'):
         run(generate(empty,tmp_path,tmp_path,provider=Provider()))
+
+
+def test_entire_corpus_above_one_mb_and_growth_is_indexed(tmp_path):
+    import sqlite3
+
+    class SparseEmbedder(Embedder):
+        def offsets(self, text):
+            return [(i, min(i + 1000, len(text))) for i in range(0, len(text), 1000)]
+
+    class NoFindings(Provider):
+        async def complete(self, messages):
+            self.messages.append(messages)
+            return {'findings': []}
+
+    (tmp_path / 'README.md').write_text('Public documentation')
+    (tmp_path / 'day-32').mkdir()
+    paths = ['README.md'] + [f'day-32/module{i}.py' for i in range(6)]
+    for size in (175000, 220000):
+        for path in paths[1:]:
+            (tmp_path / path).write_text('#' + 'a' * (size - 1))
+        result = run(generate(snapshot(), tmp_path, tmp_path / 'work', NoFindings(), SparseEmbedder()))
+        assert result['base_corpus'] == dict(files=7, bytes=6 * size + 20, omitted=0)
+        assert result['base_corpus']['bytes'] > 1000000
+        assert not result['skipped'] and not result['partial']
+        with sqlite3.connect(tmp_path / 'work/index.sqlite') as db:
+            stored = json.loads(db.execute("SELECT value FROM meta WHERE key='sources'").fetchone()[0])
+        assert set(stored) == set(paths)

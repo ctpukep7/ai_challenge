@@ -5,6 +5,7 @@ import base64
 import hashlib
 import json
 import re
+from datetime import datetime, timezone
 
 from .review import MARKER, CATEGORIES, GraphQLPermissionError, changed_lines, safe, validate_finding
 
@@ -12,6 +13,8 @@ BOT = 'github-actions[bot]'
 MAX_ANCHORS = 30
 LIFECYCLE = '<!-- day32-lifecycle-outdated -->'
 INLINE = re.compile(r'^<!-- day32-inline:([a-f0-9]{64}):([A-Za-z0-9_=-]+) -->')
+SUMMARY_HEAD = re.compile(r'<!-- day32-summary-head:([a-f0-9]{40}) -->')
+SUMMARY_SHAS = re.compile(r'Base: `([a-f0-9]{40})` · Head: `([a-f0-9]{40})`')
 THREADS = '''query($owner:String!,$name:String!,$number:Int!,$cursor:String){
  repository(owner:$owner,name:$name){pullRequest(number:$number){reviewThreads(first:100,after:$cursor){
  pageInfo{hasNextPage endCursor} nodes{id path line diffSide isOutdated isResolved viewerCanResolve viewerCanUnresolve
@@ -131,8 +134,31 @@ async def mark_outdated(api, report, thread, root, comments, stats, reason):
     stats['outdated_marked'] += 1
 
 
+def summary_for_head(comment, head_sha):
+    """Only host-authored summaries with unambiguous, agreeing SHA metadata."""
+    if not bot(comment.get('user')):
+        return False
+    lines = (comment.get('body') or '').splitlines()
+    if not lines or lines[0] != MARKER:
+        return False
+    sha_lines = [match for line in lines if (match := SUMMARY_SHAS.fullmatch(line))]
+    if len(sha_lines) != 1 or sha_lines[0][2] != head_sha:
+        return False
+    marker_lines = [line for line in lines if 'day32-summary-head:' in line]
+    if not marker_lines:
+        return True  # Legacy host summary: migrate only this exact head SHA.
+    return (len(marker_lines) == 1 and next((line for line in lines[1:] if line.strip()), None) == marker_lines[0]
+            and SUMMARY_HEAD.fullmatch(marker_lines[0]) is not None
+            and SUMMARY_HEAD.fullmatch(marker_lines[0])[1] == head_sha)
+
+
 def summary(report, stats):
-    out = [MARKER, '# AI-ревью Day32', f"Base: `{report['base_sha']}` · Head: `{report['head_sha']}`",
+    if not re.fullmatch(r'[a-f0-9]{40}', report['head_sha']):
+        raise ValueError('Неверный Head SHA сводки')
+    published = datetime.now(timezone.utc).isoformat(timespec='seconds').replace('+00:00', 'Z')
+    out = [MARKER, f"<!-- day32-summary-head:{report['head_sha']} -->", '# AI-ревью Day32',
+           f"Base: `{report['base_sha']}` · Head: `{report['head_sha']}`",
+           f"[Проверенный коммит](https://github.com/{report['repo']}/commit/{report['head_sha']}) · Публикация (UTC): `{published}`",
            f"Проверено файлов: {len(report['reviewed_files'])}/{report['total_files']}. " +
            ('Анализ частичный.' if report['partial'] else 'Все доступные файлы обработаны.')]
     for key, title in CATEGORIES.items():
@@ -245,12 +271,15 @@ async def publish_inline(api, report):
         except GraphQLPermissionError:
             await mark_outdated(api, report, t, root, comments, stats, 'integration cannot resolve')
     body = summary(report, stats)
-    own = next((x for x in issues if x.get('body','').startswith(MARKER) and bot(x.get('user'))), None)
+    own = next((x for x in issues if summary_for_head(x, report['head_sha'])), None)
     await current(api, report)
     if own:
-        await api.request('PATCH', f"issues/comments/{own['id']}", json={'body':body})
+        result = await api.request('PATCH', f"issues/comments/{own['id']}", json={'body':body})
         stats['status'] = 'updated'
     else:
-        await api.request('POST', f"issues/{report['number']}/comments", json={'body':body})
+        result = await api.request('POST', f"issues/{report['number']}/comments", json={'body':body})
         stats['status'] = 'created'
+    stats.update(summary_id=result['id'], summary_url=result.get('html_url') or
+                 f"https://github.com/{report['repo']}/pull/{report['number']}#issuecomment-{result['id']}",
+                 summary_head_sha=report['head_sha'])
     return stats
