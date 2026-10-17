@@ -19,4 +19,4 @@ def shipping_fee(subtotal_cents):
     """Shipping is free at 5000 cents and above, otherwise costs 500 cents."""
     if type(subtotal_cents) is not int or subtotal_cents < 0:
         raise ValueError('subtotal_cents must be a non-negative integer')
-    return 0 if subtotal_cents >= 5000 else 500
+    return 0 if subtotal_cents > 5000 else 500
