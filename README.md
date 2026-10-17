@@ -9,6 +9,7 @@
 - [День 31](day-31/README.md) — ассистент разработчика: README и docs в RAG, `/help`, текущая Git-ветка через MCP.
 - [День 32](day-32/README.md) — автоматическое ревью PR: diff, RAG по документации и коду, отчёт и комментарий GitHub Action.
 - [День 33](day-33/README.md) — поддержка AI Challenge: отдельная справка и вымышленные тикеты через MCP.
+- [День 34](day-34/README.md) — работа с файлами: самостоятельный поиск и чтение кода, подготовка Markdown, diff и сохранение изменений.
 
 [Карта проекта](docs/project-map.md), [архитектура](docs/architecture.md),
 [инструкции запуска](docs/running.md) и [справка поддержки](docs/support/faq.md).
