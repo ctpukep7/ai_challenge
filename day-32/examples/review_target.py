@@ -11,7 +11,7 @@ def subtotal(items):
             raise ValueError('price_cents must be a non-negative integer')
         if type(quantity) is not int or quantity <= 0:
             raise ValueError('quantity must be a positive integer')
-        total += price
+        total += price * quantity
     return total
 
 
