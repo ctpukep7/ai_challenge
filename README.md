@@ -7,6 +7,7 @@
 ## Pipeline
 
 - [День 31](day-31/README.md) — ассистент разработчика: README и docs в RAG, `/help`, текущая Git-ветка через MCP.
+- [День 32](day-32/README.md) — автоматическое ревью PR: diff, RAG по документации и коду, отчёт и комментарий GitHub Action.
 
 [Карта проекта](docs/project-map.md), [архитектура](docs/architecture.md),
 [инструкции запуска](docs/running.md) и [справка поддержки](docs/support/faq.md).
