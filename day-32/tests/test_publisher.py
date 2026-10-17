@@ -198,3 +198,71 @@ def test_incomplete_threads_abort_before_mutation():
     api=state();api.threads=[{'id':'x'}]
     with pytest.raises(ValueError,match='Неполный'):run(publish(api,report()))
     assert not api.mutations
+
+
+def test_no_permission_marks_outdated_idempotently_preserves_history():
+    api=state();old_thread(api);api.data['files']=[];api.data['pr']['changed_files']=0
+    api.threads[0]['viewerCanResolve']=False
+    original=api.inline[0]['body']
+    result=run(publish(api,report(findings=[])))
+    assert result['resolved']==0 and result['outdated_marked']==1
+    assert result['lifecycle_skipped'][0]['reason']=='viewer cannot resolve'
+    assert api.inline[0]['body'].startswith(original)
+    assert identity(api.inline[0]['body'])==identity(original)
+    assert 'Это не доказательство исправления' in api.inline[0]['body']
+    assert not api.threads[0]['isResolved']
+    before=len(api.mutations)
+    result=run(publish(api,report(findings=[])))
+    assert result['outdated_marked']==1 and not result['lifecycle_skipped'][0]['notice_updated']
+    assert not any(m.get('path','').startswith('pulls/comments/') for m in api.mutations[before:])
+
+
+def test_integration_permission_failure_falls_back_other_errors_fail():
+    from day32_review.review import GraphQLPermissionError
+    for error, expected in [(GraphQLPermissionError('denied'),True),(ValueError('unknown response'),False)]:
+        api=state();old_thread(api);api.data['files']=[];api.data['pr']['changed_files']=0
+        original=api.graphql
+        async def fail_mutation(query,variables):
+            if query.startswith('mutation'):raise error
+            return await original(query,variables)
+        api.graphql=fail_mutation
+        if expected:
+            result=run(publish(api,report(findings=[])))
+            assert result['outdated_marked']==1 and result['resolved']==0
+            assert result['lifecycle_skipped'][0]['reason']=='integration cannot resolve'
+        else:
+            with pytest.raises(ValueError,match='unknown response'):run(publish(api,report(findings=[])))
+
+
+def test_no_permission_does_not_mark_human_or_manually_resolved():
+    for human in (True,False):
+        api=state();old_thread(api);api.data['files']=[];api.data['pr']['changed_files']=0
+        api.threads[0]['viewerCanResolve']=False
+        if human:
+            api.threads[0]['comments']['nodes'][0]['author']={'login':'someone','__typename':'User'}
+        else:
+            api.threads[0]['isResolved']=True
+            api.threads[0]['resolvedBy']={'login':'someone','__typename':'User'}
+        assert run(publish(api,report(findings=[])))['outdated_marked']==0
+
+
+def test_permission_error_requires_exact_integration_forbidden():
+    from day32_review.review import GraphQLPermissionError
+    for error, expected in [({'type':'FORBIDDEN','message':'Resource not accessible by integration'},GraphQLPermissionError),
+                            ({'type':'FORBIDDEN','message':'other permission problem'},ValueError),
+                            ({'type':'INTERNAL','message':'Resource not accessible by integration'},ValueError)]:
+        def handle(request):return httpx.Response(200,json={'data':None,'errors':[error]})
+        api=GitHub('owner/repo','fake',transport=httpx.MockTransport(handle))
+        with pytest.raises(expected) as caught:
+            run(api.graphql('mutation{resolveReviewThread(input:{threadId:"x"}){thread{id}}}',{}))
+        assert type(caught.value) is expected
+
+
+def test_bot_closed_no_unresolve_permission_warns_without_false_success():
+    api=state();run(publish(api,report()))
+    api.threads[0].update(isResolved=True,viewerCanUnresolve=False,resolvedBy={'login':'github-actions','__typename':'Bot'})
+    before=api.inline[0]['body']
+    result=run(publish(api,report()))
+    assert result['reopened']==0 and result['updated']==0
+    assert result['lifecycle_skipped'][0]['reason']=='viewer cannot unresolve'
+    assert api.inline[0]['body']==before and api.threads[0]['isResolved']

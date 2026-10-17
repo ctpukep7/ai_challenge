@@ -6,10 +6,11 @@ import hashlib
 import json
 import re
 
-from .review import MARKER, CATEGORIES, changed_lines, safe, validate_finding
+from .review import MARKER, CATEGORIES, GraphQLPermissionError, changed_lines, safe, validate_finding
 
 BOT = 'github-actions[bot]'
 MAX_ANCHORS = 30
+LIFECYCLE = '<!-- day32-lifecycle-outdated -->'
 INLINE = re.compile(r'^<!-- day32-inline:([a-f0-9]{64}):([A-Za-z0-9_=-]+) -->')
 THREADS = '''query($owner:String!,$name:String!,$number:Int!,$cursor:String){
  repository(owner:$owner,name:$name){pullRequest(number:$number){reviewThreads(first:100,after:$cursor){
@@ -109,6 +110,27 @@ def inline_body(group, report):
     return '\n\n'.join(out)[:60000]
 
 
+async def mark_outdated(api, report, thread, root, comments, stats, reason):
+    # REST ownership is independently checked before editing a comment body.
+    comment = next((c for c in comments if c['id'] == root['databaseId'] and not c.get('in_reply_to_id')
+                    and bot(c.get('user')) and identity(c.get('body')) == identity(root['body'])), None)
+    detail = {'thread_id': thread['id'], 'reason': reason,
+              'viewer_can_resolve': thread['viewerCanResolve']}
+    stats['lifecycle_skipped'].append(detail)
+    if comment is None:
+        detail['notice_updated'] = False
+        detail['notice_reason'] = 'REST root ownership not verified'
+        return
+    original = comment['body'].split(LIFECYCLE, 1)[0].rstrip()
+    body = original + '\n\n' + LIFECYCLE + f"\n\n**Привязка устарела после изменения кода.** Head: `{report['head_sha']}`. " \
+           + 'Это не доказательство исправления. GitHub не разрешил боту закрыть тред автоматически; история сохранена.'
+    detail['notice_updated'] = body != comment['body']
+    if detail['notice_updated']:
+        await current(api, report)
+        await api.request('PATCH', f"pulls/comments/{comment['id']}", json={'body': body})
+    stats['outdated_marked'] += 1
+
+
 def summary(report, stats):
     out = [MARKER, '# AI-ревью Day32', f"Base: `{report['base_sha']}` · Head: `{report['head_sha']}`",
            f"Проверено файлов: {len(report['reviewed_files'])}/{report['total_files']}. " +
@@ -130,6 +152,10 @@ def summary(report, stats):
             out.append('Остальные пропуски перечислены в artifact.')
     if stats['resolved']:
         out.append(f"У {stats['resolved']} устаревших привязок закрыты треды: привязка устарела после изменения кода. Это не доказательство исправления.")
+    if stats['outdated_marked']:
+        out.append(f"Устаревшие привязки отмечены в {stats['outdated_marked']} комментариях; GitHub не разрешил боту закрыть эти треды. Это не доказательство исправления.")
+    if stats['lifecycle_skipped']:
+        out.append(f"Ограничения lifecycle: {len(stats['lifecycle_skipped'])}; причины и доступные флаги — report.json.publication.lifecycle_skipped. Ручные решения человека сохраняются.")
     out.append('Отсутствие замечаний не доказывает корректность. Ревью не блокирует merge.')
     return '\n\n'.join(out)[:60000]
 
@@ -160,7 +186,7 @@ async def publish_inline(api, report):
     issues = await api.pages(f"issues/{report['number']}/comments")
     await current(api, report)
     stats = {'status': 'published', 'created': 0, 'updated': 0, 'resolved': 0, 'reopened': 0,
-             'omitted_anchors': max(0,len(groups)-MAX_ANCHORS), 'inline': []}
+             'outdated_marked': 0, 'lifecycle_skipped': [], 'omitted_anchors': max(0,len(groups)-MAX_ANCHORS), 'inline': []}
     for group in selected:
         f = group[0]; side = 'RIGHT' if f['side'] == 'head' else 'LEFT'
         matches = []
@@ -177,13 +203,18 @@ async def publish_inline(api, report):
         if matches:
             t, comment = matches[0]
             # Do not alter or reopen a human-resolved thread.
-            if not t['isResolved'] or bot(t.get('resolvedBy'), True):
+            if not t['isResolved'] or (bot(t.get('resolvedBy'), True) and t['viewerCanUnresolve']):
                 await current(api, report)
                 await api.request('PATCH', f"pulls/comments/{comment['id']}", json={'body':body})
                 stats['updated'] += 1
                 if t['isResolved'] and t['viewerCanUnresolve']:
-                    await transition(api, report, t, False)
-                    stats['reopened'] += 1
+                    try:
+                        await transition(api, report, t, False)
+                        stats['reopened'] += 1
+                    except GraphQLPermissionError:
+                        stats['lifecycle_skipped'].append({'thread_id': t['id'], 'reason': 'integration cannot unresolve', 'viewer_can_unresolve': t['viewerCanUnresolve']})
+            elif t['isResolved'] and bot(t.get('resolvedBy'), True):
+                stats['lifecycle_skipped'].append({'thread_id': t['id'], 'reason': 'viewer cannot unresolve', 'viewer_can_unresolve': t['viewerCanUnresolve']})
             stats['inline'].append({'id':comment['id'],'url':comment.get('html_url',root.get('url'))})
         else:
             await current(api, report)
@@ -193,7 +224,7 @@ async def publish_inline(api, report):
             stats['inline'].append({'id':created['id'],'url':created.get('html_url')})
     for t in thread_rows:
         owned = owned_thread(t)
-        if not owned or not t['isOutdated'] or t['isResolved'] or not t['viewerCanResolve'] or owned[1][0] in all_keys or not complete_files:
+        if not owned or not t['isOutdated'] or t['isResolved'] or owned[1][0] in all_keys or not complete_files:
             continue
         root, ident, side = owned
         row = next((r for r in rows if r['filename'] == t['path'] or r.get('previous_filename') == t['path']), None)
@@ -205,8 +236,14 @@ async def publish_inline(api, report):
                            and ident[1] not in changed_lines(row['patch'])[side].values())
         if not absent and not disappeared:
             continue
-        await transition(api, report, t, True)
-        stats['resolved'] += 1
+        if not t['viewerCanResolve']:
+            await mark_outdated(api, report, t, root, comments, stats, 'viewer cannot resolve')
+            continue
+        try:
+            await transition(api, report, t, True)
+            stats['resolved'] += 1
+        except GraphQLPermissionError:
+            await mark_outdated(api, report, t, root, comments, stats, 'integration cannot resolve')
     body = summary(report, stats)
     own = next((x for x in issues if x.get('body','').startswith(MARKER) and bot(x.get('user'))), None)
     await current(api, report)

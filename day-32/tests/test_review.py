@@ -339,3 +339,29 @@ def test_cli_default_root_uses_callers_directory(tmp_path, monkeypatch):
     monkeypatch.setattr(cli, 'bounded_run', capture)
     cli.main()
     assert seen == [tmp_path]
+
+
+def test_truly_empty_pr_does_not_embed_or_call_model(tmp_path, monkeypatch):
+    import day32_review.review as module
+    empty=snapshot();empty.update(files=[],total_files=0)
+    def forbidden(*args,**kwargs):raise AssertionError('No embedding/index for empty PR')
+    monkeypatch.setattr(module,'FastEmbedder',forbidden)
+    monkeypatch.setattr(module,'Index',forbidden)
+    class NoModel:
+        async def complete(self,messages):raise AssertionError('No LLM for empty PR')
+    result=run(generate(empty,tmp_path,tmp_path,provider=NoModel()))
+    assert result['partial'] is False and not result['findings'] and not result['sources']
+    assert result['base_corpus']==dict(files=0,bytes=0,omitted=0)
+
+
+def test_empty_pr_still_checks_provider_configuration(tmp_path, monkeypatch):
+    empty=snapshot();empty.update(files=[],total_files=0)
+    monkeypatch.delenv('DEEPSEEK_API_KEY',raising=False)
+    with pytest.raises(ProviderError,match='DEEPSEEK_API_KEY'):
+        run(generate(empty,tmp_path,tmp_path,provider=DeepSeek()))
+
+
+def test_empty_live_pr_still_checks_base_checkout(tmp_path):
+    empty=snapshot();empty.update(mode='live',files=[],total_files=0)
+    with pytest.raises(ValueError,match='Git checkout'):
+        run(generate(empty,tmp_path,tmp_path,provider=Provider()))
